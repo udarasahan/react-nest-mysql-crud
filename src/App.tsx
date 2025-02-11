@@ -1,5 +1,11 @@
-// src/App.js
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+} from "./redux/slices/taskSlice";
 import {
   Container,
   TextField,
@@ -9,47 +15,31 @@ import {
   Typography,
   Checkbox,
 } from "@mui/material";
-import axios from "axios";
-
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  completed: boolean;
-}
-
-const API_URL = "http://localhost:3000/tasks";
+import type { RootState, AppDispatch } from "./redux/store";
 
 const App: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+  const tasks = useSelector((state: RootState) => state.tasks.tasks);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const fetchTasks = async () => {
-    const response = await axios.get(API_URL);
-    setTasks(response.data);
-  };
-
-  const addTask = async () => {
-    await axios.post(API_URL, { title, description });
-    setTitle("");
-    setDescription("");
-    fetchTasks();
-  };
-
-  const updateTask = async (id: string, completed: boolean) => {
-    await axios.patch(`${API_URL}/${id}`, { completed });
-    fetchTasks();
-  };
-
-  const deleteTask = async (id: string) => {
-    await axios.delete(`${API_URL}/${id}`);
-    fetchTasks();
-  };
-
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    dispatch(fetchTasks());
+  }, [dispatch]);
+
+  const handleAddTask = () => {
+    if (title.trim() && description.trim()) {
+      dispatch(
+        addTask({
+          title,
+          description,
+          completed: false,
+        })
+      );
+      setTitle("");
+      setDescription("");
+    }
+  };
 
   return (
     <Container maxWidth="sm" style={{ marginTop: "20px" }}>
@@ -70,7 +60,12 @@ const App: React.FC = () => {
         onChange={(e) => setDescription(e.target.value)}
         margin="normal"
       />
-      <Button variant="contained" color="primary" onClick={addTask} fullWidth>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleAddTask}
+        fullWidth
+      >
         Add Task
       </Button>
       <div style={{ marginTop: "20px" }}>
@@ -98,12 +93,16 @@ const App: React.FC = () => {
                 <div>
                   <Checkbox
                     checked={task.completed}
-                    onChange={() => updateTask(task.id.toString(), !task.completed)}
+                    onChange={() =>
+                      dispatch(
+                        updateTask({ id: task.id, completed: !task.completed })
+                      )
+                    }
                   />
                   <Button
                     variant="contained"
                     color="secondary"
-                    onClick={() => deleteTask(task.id.toString())}
+                    onClick={() => dispatch(deleteTask(task.id))}
                   >
                     Delete
                   </Button>
